@@ -40,7 +40,7 @@ If this tool adds value to your life, your support means the world. Every contri
 
 ### Quick Start
 1. **Phone:** Clone this repo, install dependencies in `server/` and `remote-ui/`, then start the hub.
-2. **Laptop:** Download the Windows package, run `setup.bat`, and load the Chrome extension.
+2. **Laptop:** Download the Windows package (Tip: Use a tool like **rclone** or a cloud drive to quickly move the zip from your phone to your laptop), run `setup.bat`, and load the Chrome extension.
 3. **Connect:** Ensure both devices are on the same local network and update the IP in your `.env`.
 
 ---
