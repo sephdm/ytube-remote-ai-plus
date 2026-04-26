@@ -34,6 +34,11 @@ If this tool adds value to your life, your support means the world. Every contri
   - **Queue:** Add the top result to your queue without interrupting your current video.
 - **Mobile Optimized:** Built with React, Vite (Rolldown), and Framer Motion for a native-app feel.
 
+## 🔒 Security & Privacy
+- **Hard-Locked Scope:** The browser extension is strictly limited to `youtube.com`. It has **zero permission** to access, read, or interact with any other websites or your personal browser data.
+- **Local Communication:** Data stays within your local Wi-Fi/Hotspot network.
+- **Zero-Cost AI:** Uses your existing Gemini CLI session for privacy and account-based control.
+
 ## 🛠️ Requirements & Setup
 - **Android Side:** Requires Node.js. For AI features, the Gemini CLI is currently best run inside a **PRoot Ubuntu** environment in Termux, but the basic remote functions work in standard Termux as well.
 - **Windows Side:** Requires Node.js (for the Bridge) and a Chromium-based browser (for the Extension).
