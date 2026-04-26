@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [audioBoost, setAudioBoost] = useState(false);
   const [aiMode, setAiMode] = useState<'direct' | 'confirm' | 'queue'>('confirm');
   const [suggestedQuery, setSuggestedQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   useEffect(() => {
     const newSocket = io(SERVER_URL, { query: { type: 'ui' } });
@@ -31,7 +32,14 @@ const App: React.FC = () => {
     newSocket.on('connect', () => setStatus(s => ({ ...s, connected: true })));
     newSocket.on('disconnect', () => setStatus(s => ({ ...s, connected: false })));
     newSocket.on('system-status', (data) => setStatus(s => ({ ...s, ...data })));
-    newSocket.on('extension-data', (data) => setStatus(s => ({ ...s, ...data, extensionConnected: true })));
+    
+    newSocket.on('extension-data', (data) => {
+      if (Array.isArray(data)) {
+        setSearchResults(data); // These are the search results
+      } else {
+        setStatus(s => ({ ...s, ...data, extensionConnected: true }));
+      }
+    });
     
     newSocket.on('ai-suggestion', (data: { query: string }) => {
       setSuggestedQuery(data.query);
@@ -228,9 +236,36 @@ const App: React.FC = () => {
                   </motion.div>
                 )}
 
-                <button onClick={() => { sendCommand('ai-search', { prompt, mode: aiMode }); setPrompt(''); }} className="w-full py-5 bg-gradient-to-r from-sky-600 to-sky-400 rounded-2xl font-black text-xs tracking-[0.2em] uppercase text-black shadow-xl shadow-sky-500/20 active:scale-[0.98] transition-all">
+                <button onClick={() => { sendCommand('ai-search', { prompt, mode: aiMode }); setPrompt(''); setSearchResults([]); }} className="w-full py-5 bg-gradient-to-r from-sky-600 to-sky-400 rounded-2xl font-black text-xs tracking-[0.2em] uppercase text-black shadow-xl shadow-sky-500/20 active:scale-[0.98] transition-all">
                   Generate Search
                 </button>
+
+                {/* Results Gallery */}
+                {searchResults.length > 0 && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-8 space-y-4">
+                    <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest px-2">Top Results</h4>
+                    <div className="flex flex-col gap-3">
+                      {searchResults.map((video, i) => (
+                        <motion.button
+                          key={video.videoId}
+                          initial={{ x: -10, opacity: 0 }}
+                          animate={{ x: 0, opacity: 1 }}
+                          transition={{ delay: i * 0.1 }}
+                          onClick={() => {
+                            sendCommand('execute-search', { query: `https://www.youtube.com/watch?v=${video.videoId}`, mode: 'direct' });
+                            setSearchResults([]);
+                          }}
+                          className="flex items-center gap-4 p-3 bg-white/5 rounded-2xl border border-white/5 active:bg-white/10 text-left transition-all group"
+                        >
+                          <div className="relative w-24 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-zinc-900">
+                             <img src={video.thumbnail} className="w-full h-full object-cover opacity-80 group-active:opacity-100" />
+                          </div>
+                          <p className="text-xs font-medium leading-snug line-clamp-2 pr-4">{video.title}</p>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           )}

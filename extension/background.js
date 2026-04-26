@@ -18,7 +18,7 @@ socket.on('command', (cmd) => {
 });
 
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'status') {
+  if (msg.type === 'status' || msg.type === 'search-results') {
     socket.emit('extension-data', msg.data);
   }
 });

@@ -53,18 +53,56 @@ function handleCommand(cmd) {
       document.querySelector('ytd-subscribe-button-renderer button')?.click();
       break;
     case 'execute-search':
-      const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(cmd.query)}`;
-      if (cmd.mode === 'queue') {
-        // Queue logic: Open in hidden iframe or fetch result then queue
-        // For simplicity, we'll navigate for now, or use a more advanced 'add to queue' script
-        console.log('Queue mode requested for:', cmd.query);
-        window.location.href = searchUrl + '&sp=EgIQAQ%253D%253D'; // Appends filter for videos only
+      if (cmd.query.startsWith('http')) {
+        window.location.href = cmd.query; // Direct video link
       } else {
-        window.location.href = searchUrl;
+        window.location.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(cmd.query)}`;
       }
       break;
   }
 }
+
+// Scrape search results if on a search page
+function scrapeResults() {
+  if (!window.location.pathname.includes('/results')) return;
+  
+  const results = [];
+  const videoElements = document.querySelectorAll('ytd-video-renderer');
+  
+  videoElements.forEach((el, index) => {
+    if (index > 5) return; // Top 5 only
+    const titleEl = el.querySelector('#video-title');
+    const imgEl = el.querySelector('img');
+    const linkEl = el.querySelector('a#thumbnail');
+
+    if (titleEl && linkEl) {
+      results.push({
+        title: titleEl.innerText,
+        videoId: linkEl.href.split('v=')[1]?.split('&')[0],
+        thumbnail: imgEl?.src || ''
+      });
+    }
+  });
+
+  if (results.length > 0) {
+    chrome.runtime.sendMessage({
+      type: 'search-results',
+      data: results
+    });
+  }
+}
+
+// Watch for page changes
+let lastUrl = location.href;
+new MutationObserver(() => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href;
+    setTimeout(scrapeResults, 2000); // Wait for YT to load results
+  }
+}).observe(document, { subtree: true, childList: true });
+
+// Initial scrape
+setTimeout(scrapeResults, 2000);
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((msg) => {
