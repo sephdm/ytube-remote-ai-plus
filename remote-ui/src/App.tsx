@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const SERVER_URL = `http://${window.location.hostname}:8927`;
+const SERVER_URL = `http://${window.location.hostname}:8928`;
 
 const App: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);

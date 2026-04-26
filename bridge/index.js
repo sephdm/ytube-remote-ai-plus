@@ -6,7 +6,7 @@ const http = require('http');
 const { exec } = require('child_process');
 const os = require('os');
 
-const PORT = 8927;
+const PORT = 8928;
 let HUB_IP = null;
 
 function getSubnets() {
