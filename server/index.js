@@ -16,6 +16,8 @@ const io = new Server(server, {
   }
 });
 
+io.setMaxListeners(50); // Prevent MaxListenersExceededWarning
+
 let extensionSocket = null;
 let bridgeSocket = null;
 let pendingBridgeCommands = [];

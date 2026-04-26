@@ -43,11 +43,17 @@ async function discover() {
         });
     };
 
-    // Scan all subnets in parallel
+    // Scan all subnets in parallel, checking .1 first
     for (const subnet of subnets) {
         console.log(`Checking subnet: ${subnet}.x`);
+        
+        // Strategy: Check .1 first (standard for Hotspots)
+        const gatewayIp = `${subnet}.1`;
+        const isGateway = await check(gatewayIp);
+        if (isGateway) { HUB_IP = isGateway; break; }
+
         const promises = [];
-        for (let i = 1; i < 255; i++) {
+        for (let i = 2; i < 255; i++) {
             promises.push(check(`${subnet}.${i}`));
             // Batch the pings to avoid overwhelming the network
             if (promises.length > 50) {
