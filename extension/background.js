@@ -5,7 +5,7 @@ const HUB_IP = 'PHONE_IP_HERE'; // We will need to set this
 const socket = io(`http://${HUB_IP}:8927`, { query: { type: 'extension' } });
 
 socket.on('connect', () => {
-  console.log('Connected to Pixel 3XL Hub');
+  console.log('Connected to Android Hub');
 });
 
 socket.on('command', (cmd) => {

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YT Remote Extension",
   "version": "1.0",
-  "description": "Remote control for YouTube playback via Pixel 3XL Hub.",
+  "description": "Remote control for YouTube playback via Android Hub.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {

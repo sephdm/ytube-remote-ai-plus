@@ -8,7 +8,7 @@ const socket = io(`http://${HUB_IP}:8927`, { query: { type: 'bridge' } });
 console.log('Windows System Bridge starting...');
 
 socket.on('connect', () => {
-  console.log('Connected to Pixel 3XL Hub');
+  console.log('Connected to Android 3XL Hub');
 });
 
 socket.on('system-command', (cmd) => {

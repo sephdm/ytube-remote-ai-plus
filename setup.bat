@@ -1,5 +1,5 @@
 @echo off
-title YouTube Remote Setup Wizard - ASUS ROG STRIX 2025
+title YouTube Remote Setup Wizard - Windows 11 Laptop
 color 0B
 cls
 
