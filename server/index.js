@@ -35,6 +35,7 @@ app.get('/bridge-poll', (req, res) => {
 });
 
 io.on('connection', (socket) => {
+  socket.setMaxListeners(100); // Fix: Set limit on individual socket
   const type = socket.handshake.query.type;
   console.log(`New connection: ${socket.id} (Type: ${type})`);
 
