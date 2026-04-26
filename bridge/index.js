@@ -1,45 +1,86 @@
-const { io } = require('socket.io-client');
+/**
+ * AUTO-DISCOVERY WINDOWS BRIDGE (ZERO-DEPENDENCY)
+ * Automatically finds the Android Hub on your local network.
+ */
+const http = require('http');
 const { exec } = require('child_process');
+const os = require('os');
 
-// Replace with your Pixel 3XL's IP address
-const HUB_IP = 'PHONE_IP_HERE'; 
-const socket = io(`http://${HUB_IP}:8927`, { query: { type: 'bridge' } });
+const PORT = 8927;
+let HUB_IP = null;
 
-console.log('Windows System Bridge starting...');
-
-socket.on('connect', () => {
-  console.log('Connected to Android 3XL Hub');
-});
-
-socket.on('system-command', (cmd) => {
-  console.log('Received system command:', cmd);
-
-  switch (cmd.type) {
-    case 'toggle-bt':
-      // PowerShell command to toggle Bluetooth
-      const psCommand = `
-        $radio = Get-NetAdapter | Where-Object { $_.Name -like "*Bluetooth*" };
-        if ($radio.Status -eq "Up") {
-          Disable-NetAdapter -Name $radio.Name -Confirm:$false
-          echo "Bluetooth Disabled"
-        } else {
-          Enable-NetAdapter -Name $radio.Name -Confirm:$false
-          echo "Bluetooth Enabled"
+function getSubnet() {
+    const interfaces = os.networkInterfaces();
+    for (const name in interfaces) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address.split('.').slice(0, 3).join('.');
+            }
         }
-      `;
-      // Alternative using modern Windows Bluetooth APIs (requires a helper or specific CLI)
-      // For now, let's use a simpler toggle if available or NirCmd
-      exec(`powershell -Command "${psCommand.replace(/\n/g, '')}"`, (err, stdout) => {
-        console.log(stdout || err);
-      });
-      break;
+    }
+    return '192.168.1';
+}
 
-    case 'set-system-volume':
-      // Using nircmd (popular Windows utility) or PowerShell
-      // PowerShell: (new-object -com wscript.shell).SendKeys([char]175) is for volume up
-      // Better way: use a small NirCmd command if user has it, or a generic PS script
-      const vol = Math.floor(cmd.volume * 655.35); // Scale 0-100 to 0-65535
-      exec(`powershell -Command "$obj = new-object -com wscript.shell; for($i=0; $i<50; $i++) { $obj.SendKeys([char]174) }; for($i=0; $i<${Math.floor(cmd.volume/2)}; $i++) { $obj.SendKeys([char]175) }"`);
-      break;
-  }
-});
+async function discover() {
+    const subnet = getSubnet();
+    console.log(`Scanning subnet ${subnet}.x for Android Hub...`);
+    
+    for (let i = 1; i < 255; i++) {
+        const ip = `${subnet}.${i}`;
+        const check = (targetIp) => {
+            return new Promise((resolve) => {
+                const req = http.get(`http://${targetIp}:${PORT}/identify`, { timeout: 200 }, (res) => {
+                    let data = '';
+                    res.on('data', d => data += d);
+                    res.on('end', () => {
+                        try {
+                            if (JSON.parse(data).service === 'yt-remote-hub') {
+                                resolve(targetIp);
+                            } else resolve(null);
+                        } catch (e) { resolve(null); }
+                    });
+                });
+                req.on('error', () => resolve(null));
+                req.on('timeout', () => { req.destroy(); resolve(null); });
+            });
+        };
+
+        const found = await check(ip);
+        if (found) {
+            HUB_IP = found;
+            console.log(`>>> SUCCESS: Found Android Hub at ${HUB_IP}`);
+            startPolling();
+            return;
+        }
+    }
+    console.log("Hub not found. Retrying scan in 10s...");
+    setTimeout(discover, 10000);
+}
+
+function startPolling() {
+    http.get(`http://${HUB_IP}:${PORT}/bridge-poll`, (res) => {
+        let data = '';
+        res.on('data', d => data += d);
+        res.on('end', () => {
+            try {
+                const cmd = JSON.parse(data);
+                if (cmd && cmd.type) handleCommand(cmd);
+            } catch (e) {}
+            setTimeout(startPolling, 800);
+        });
+    }).on('error', () => {
+        console.log("Connection lost. Re-scanning...");
+        discover();
+    });
+}
+
+function handleCommand(cmd) {
+    console.log('Action:', cmd.type);
+    if (cmd.type === 'toggle-bt') {
+        exec(`powershell -Command "Get-NetAdapter | Where-Object { $_.Name -like '*Bluetooth*' } | ForEach-Object { if ($_.Status -eq 'Up') { Disable-NetAdapter -Name $_.Name -Confirm:$false } else { Enable-NetAdapter -Name $_.Name -Confirm:$false } }"`);
+    } else if (cmd.type === 'set-system-volume') {
+        exec(`powershell -Command "$obj = new-object -com wscript.shell; for($i=0; $i<10; $i++) { $obj.SendKeys([char]174) }; for($i=0; $i<${Math.floor(cmd.volume/10)}; $i++) { $obj.SendKeys([char]175) }"`);
+    }
+}
+
+discover();

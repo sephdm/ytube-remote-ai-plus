@@ -18,6 +18,19 @@ const io = new Server(server, {
 
 let extensionSocket = null;
 let bridgeSocket = null;
+let pendingBridgeCommands = [];
+
+app.get('/identify', (req, res) => {
+  res.json({ service: 'yt-remote-hub', version: '1.0' });
+});
+
+app.get('/bridge-poll', (req, res) => {
+  if (pendingBridgeCommands.length > 0) {
+    res.json(pendingBridgeCommands.shift());
+  } else {
+    res.json({});
+  }
+});
 
 io.on('connection', (socket) => {
   const type = socket.handshake.query.type;
@@ -103,10 +116,9 @@ io.on('connection', (socket) => {
   // Handle system commands (Bluetooth/Audio)
   socket.on('system-command', (data) => {
     console.log('System command received:', data);
+    pendingBridgeCommands.push(data); // Add to queue for polling bridge
     if (bridgeSocket) {
       bridgeSocket.emit('system-command', data);
-    } else {
-      console.log('Error: Windows Bridge not connected');
     }
   });
 
