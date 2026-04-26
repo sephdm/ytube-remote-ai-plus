@@ -24,9 +24,11 @@ function getSubnets() {
 
 async function discover() {
     const subnets = getSubnets();
+    const myIps = Object.values(os.networkInterfaces()).flat().map(i => i.address);
     console.log(`Scanning subnets: ${subnets.join(', ')} for Android Hub...`);
     
     const check = (targetIp) => {
+        if (myIps.includes(targetIp)) return null; // Skip self
         return new Promise((resolve) => {
             const req = http.get(`http://${targetIp}:${PORT}/identify`, { timeout: 300 }, (res) => {
                 let data = '';
