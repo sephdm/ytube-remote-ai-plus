@@ -30,6 +30,7 @@ const App: React.FC = () => {
     
     newSocket.on('connect', () => setStatus(s => ({ ...s, connected: true })));
     newSocket.on('disconnect', () => setStatus(s => ({ ...s, connected: false })));
+    newSocket.on('system-status', (data) => setStatus(s => ({ ...s, ...data })));
     newSocket.on('extension-data', (data) => setStatus(s => ({ ...s, ...data, extensionConnected: true })));
     
     newSocket.on('ai-suggestion', (data: { query: string }) => {

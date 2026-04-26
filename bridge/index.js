@@ -95,7 +95,15 @@ function startPolling() {
 function handleCommand(cmd) {
     console.log('Action:', cmd.type);
     if (cmd.type === 'toggle-bt') {
-        exec(`powershell -Command "Get-NetAdapter | Where-Object { $_.Name -like '*Bluetooth*' } | ForEach-Object { if ($_.Status -eq 'Up') { Disable-NetAdapter -Name $_.Name -Confirm:$false } else { Enable-NetAdapter -Name $_.Name -Confirm:$false } }"`);
+        // Advanced Radio toggle for Windows 11
+        const ps = `
+            Add-Type -AssemblyName System.Runtime.WindowsRuntime;
+            $asTaskGeneric = ([System.Windows.Devices.Radios.Radio].GetMethods() | Where-Object { $_.Name -eq 'GetRadiosAsync' -and $_.GetParameters().Count -eq 0 })[0];
+            $radios = [ThreadModel.AsyncInfo]::Run($asTaskGeneric.Invoke($null, @()));
+            $bluetooth = $radios | Where-Object { $_.Kind -eq 'Bluetooth' };
+            if ($bluetooth.State -eq 'On') { $bluetooth.SetStateAsync('Off') } else { $bluetooth.SetStateAsync('On') }
+        `;
+        exec(`powershell -Command "${ps.replace(/\n/g, '')}"`);
     } else if (cmd.type === 'set-system-volume') {
         exec(`powershell -Command "$obj = new-object -com wscript.shell; for($i=0; $i<10; $i++) { $obj.SendKeys([char]174) }; for($i=0; $i<${Math.floor(cmd.volume/10)}; $i++) { $obj.SendKeys([char]175) }"`);
     }

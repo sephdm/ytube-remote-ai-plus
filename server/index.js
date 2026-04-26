@@ -18,6 +18,7 @@ const io = new Server(server, {
 
 io.setMaxListeners(50); // Prevent MaxListenersExceededWarning
 
+let lastBridgePoll = 0;
 let extensionSocket = null;
 let bridgeSocket = null;
 let pendingBridgeCommands = [];
@@ -27,12 +28,22 @@ app.get('/identify', (req, res) => {
 });
 
 app.get('/bridge-poll', (req, res) => {
+  lastBridgePoll = Date.now(); // Track connection
   if (pendingBridgeCommands.length > 0) {
     res.json(pendingBridgeCommands.shift());
   } else {
     res.json({});
   }
 });
+
+// Broadcast status to UI every 2 seconds
+setInterval(() => {
+  const status = {
+    bridgeConnected: (Date.now() - lastBridgePoll) < 5000,
+    extensionConnected: !!extensionSocket
+  };
+  io.emit('system-status', status);
+}, 2000);
 
 io.on('connection', (socket) => {
   socket.setMaxListeners(100); // Fix: Set limit on individual socket
