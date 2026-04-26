@@ -1,8 +1,12 @@
 import './socket.io.min.js';
 
-// Configuration: Replace with your Pixel 3XL's IP address
-const HUB_IP = 'PHONE_IP_HERE'; // We will need to set this
-const socket = io(`http://${HUB_IP}:8927`, { query: { type: 'extension' } });
+// Configuration: The Bridge will update this, or we scan
+const HUB_IP = '25.3.51.219'; 
+const socket = io(`http://${HUB_IP}:8928`, { 
+  query: { type: 'extension' },
+  transports: ['websocket'], // FORCE WEBSOCKETS ONLY (Fixes r.open error)
+  upgrade: false
+});
 
 socket.on('connect', () => {
   console.log('Connected to Android Hub');

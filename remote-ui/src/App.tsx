@@ -76,7 +76,7 @@ const App: React.FC = () => {
             <span className="text-[9px] font-black tracking-[0.3em] text-zinc-500 uppercase">Aether Link Active</span>
           </div>
           <h1 className="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-400 to-zinc-600">
-            YT_CELESTIAL.PRO
+            YT_CELESTIAL.PRO v1.1
           </h1>
         </div>
         
