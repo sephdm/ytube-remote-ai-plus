@@ -1,6 +1,6 @@
 /**
- * AUTO-DISCOVERY WINDOWS BRIDGE (ZERO-DEPENDENCY)
- * Automatically finds the Android Hub on your local network.
+ * AGGRESSIVE AUTO-DISCOVERY WINDOWS BRIDGE
+ * Scans ALL network interfaces to find the Android Hub.
  */
 const http = require('http');
 const { exec } = require('child_process');
@@ -9,52 +9,64 @@ const os = require('os');
 const PORT = 8927;
 let HUB_IP = null;
 
-function getSubnet() {
+function getSubnets() {
+    const subnets = [];
     const interfaces = os.networkInterfaces();
     for (const name in interfaces) {
         for (const iface of interfaces[name]) {
             if (iface.family === 'IPv4' && !iface.internal) {
-                return iface.address.split('.').slice(0, 3).join('.');
+                subnets.push(iface.address.split('.').slice(0, 3).join('.'));
             }
         }
     }
-    return '192.168.1';
+    return [...new Set(subnets)]; // Unique subnets
 }
 
 async function discover() {
-    const subnet = getSubnet();
-    console.log(`Scanning subnet ${subnet}.x for Android Hub...`);
+    const subnets = getSubnets();
+    console.log(`Scanning subnets: ${subnets.join(', ')} for Android Hub...`);
     
-    for (let i = 1; i < 255; i++) {
-        const ip = `${subnet}.${i}`;
-        const check = (targetIp) => {
-            return new Promise((resolve) => {
-                const req = http.get(`http://${targetIp}:${PORT}/identify`, { timeout: 200 }, (res) => {
-                    let data = '';
-                    res.on('data', d => data += d);
-                    res.on('end', () => {
-                        try {
-                            if (JSON.parse(data).service === 'yt-remote-hub') {
-                                resolve(targetIp);
-                            } else resolve(null);
-                        } catch (e) { resolve(null); }
-                    });
+    const check = (targetIp) => {
+        return new Promise((resolve) => {
+            const req = http.get(`http://${targetIp}:${PORT}/identify`, { timeout: 300 }, (res) => {
+                let data = '';
+                res.on('data', d => data += d);
+                res.on('end', () => {
+                    try {
+                        if (JSON.parse(data).service === 'yt-remote-hub') resolve(targetIp);
+                        else resolve(null);
+                    } catch (e) { resolve(null); }
                 });
-                req.on('error', () => resolve(null));
-                req.on('timeout', () => { req.destroy(); resolve(null); });
             });
-        };
+            req.on('error', () => resolve(null));
+            req.on('timeout', () => { req.destroy(); resolve(null); });
+        });
+    };
 
-        const found = await check(ip);
-        if (found) {
-            HUB_IP = found;
-            console.log(`>>> SUCCESS: Found Android Hub at ${HUB_IP}`);
-            startPolling();
-            return;
+    // Scan all subnets in parallel
+    for (const subnet of subnets) {
+        console.log(`Checking subnet: ${subnet}.x`);
+        const promises = [];
+        for (let i = 1; i < 255; i++) {
+            promises.push(check(`${subnet}.${i}`));
+            // Batch the pings to avoid overwhelming the network
+            if (promises.length > 50) {
+                const results = await Promise.all(promises);
+                const found = results.find(r => r !== null);
+                if (found) { HUB_IP = found; break; }
+                promises.length = 0;
+            }
         }
+        if (HUB_IP) break;
     }
-    console.log("Hub not found. Retrying scan in 10s...");
-    setTimeout(discover, 10000);
+
+    if (HUB_IP) {
+        console.log(`>>> SUCCESS: Found Android Hub at ${HUB_IP}`);
+        startPolling();
+    } else {
+        console.log("Hub not found on any network. Retrying in 10s...");
+        setTimeout(discover, 10000);
+    }
 }
 
 function startPolling() {
